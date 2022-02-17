@@ -1,10 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/user.js');
+const bcrypt = require('bcrypt');
 
 //Validation with Joi, for schema validation
-const { registerValidation } = require('../validation');
+const { registerValidation, loginValidation } = require('../validation');
 
+// REGISTER NEW USER
 router.post('/register', async (req, res) => {
   // VALIDATE DATA BEFORE MAKING A USER
   const { error } = registerValidation(req.body);
@@ -17,18 +19,45 @@ router.post('/register', async (req, res) => {
   const emailExists = await User.findOne({ email: req.body.email });
   if (emailExists) return res.status(400).send('Email already exists');
 
+  //HASH THE PASSWORD (first generate salt)
+  const salt = await bcrypt.genSalt(10);
+  const hashedPassword = await bcrypt.hash(req.body.password, salt);
+
   // CREATE NEW USER
   const user = new User({
     name: req.body.name,
     email: req.body.email,
-    password: req.body.password,
+    password: hashedPassword,
   });
   try {
     const savedUser = await user.save();
-    res.send(savedUser);
+    res.send({ user: user._id });
   } catch (error) {
     res.status(400).send(error);
   }
+});
+
+//LOGIN
+router.post('/login', async (req, res) => {
+  // VALIDATE DATA BEFORE MAKING A USER
+  const { error } = loginValidation(req.body);
+  if (error) {
+    return res.status(400).send(error.details[0].message);
+  }
+
+  //CHECKING IF USER EXISTS BY LOOKING FOR USER'S EMAIL
+  const user = await User.findOne({ email: req.body.email });
+  if (!user) return res.status(400).send('This email is not in our system');
+
+  // CHECK IF PASSWORD IS CORRECT BY COMPARING THE USER PASSWORD
+  const correctPassword = await bcrypt.compare(
+    req.body.password,
+    user.password
+  );
+  if (!correctPassword)
+    return res.status(400).send('Please enter the correct password');
+
+  res.send('Successfully logged in');
 });
 
 module.exports = router;
