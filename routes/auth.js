@@ -2,7 +2,11 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/user.js');
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const dotenv = require('dotenv');
 
+// for the token
+dotenv.config({ path: '../config/config.env' });
 //Validation with Joi, for schema validation
 const { registerValidation, loginValidation } = require('../validation');
 
@@ -39,7 +43,7 @@ router.post('/register', async (req, res) => {
 
 //LOGIN
 router.post('/login', async (req, res) => {
-  // VALIDATE DATA BEFORE MAKING A USER
+  // VALIDATE DATA BEFORE LOGGING IN A USER (LOGIN FORM)
   const { error } = loginValidation(req.body);
   if (error) {
     return res.status(400).send(error.details[0].message);
@@ -57,7 +61,9 @@ router.post('/login', async (req, res) => {
   if (!correctPassword)
     return res.status(400).send('Please enter the correct password');
 
-  res.send('Successfully logged in');
+  // CREATE AND ASSIGN A TOKEN (PASS IN SOME INFORMATION, WE WILL USE THE ID) THEN ADD TO HEADER
+  const token = jwt.sign({ _id: user._id }, process.env.TOKEN_SECRET);
+  res.header('auth-token', token).send(token);
 });
 
 module.exports = router;

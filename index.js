@@ -14,6 +14,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 //Import auth routes
 const authRoutes = require('./routes/auth.js');
+const postRoute = require('./routes/posts.js');
 
 //connect MongoDb
 connectDB();
@@ -23,6 +24,7 @@ app.use(express.json());
 
 // set up routes
 app.use('/api/user', authRoutes);
+app.use('/api/posts', postRoute);
 
 // create port
 const PORT = process.env.PORT || 5000;
